@@ -13,8 +13,9 @@ color_list = colors[:]  # makes a copy
 names = ["Tom", "Bob", "Chewbacca", "KeshaEUW", "Yoda", "Draven", "Thresh", "Ekko", "Kalista", "kid"]
 name_list = names[:]  # makes a copy
 
-clients = {}  # dict[str, dict[str, int | str]]
-bullets = {}  # dict[str, list[dict[str, int]]]
+clients = {}   # dict[str, dict[str, int | str]]
+bullets = {}   # dict[str, list[dict[str, int]]]
+powerups = {}  # dict[str, dict[str, int]]
 
 canvas_width = 1905  # 1905 for full-screen --  750 for half-screen
 canvas_height = 890  # 890 for full-screen  --  800 for half-screen
@@ -28,12 +29,17 @@ bullet_damage = 27
 bullet_color = "yellow"
 bullet_cooldown = 400  # milliseconds
 
-thread = None
-last_time = time.time()
+powerup_radius = 17
 
-# FIX -> THE MORE PLAYER IT IS THE FASTER THE BULLETS TRAVEL
-# (ONLY WHEN BOTH WINDOWS CAN BE SEEN (NOT IF THEY ARE DIFFERENT TABS ON SAME WINDOW))
-# (AND THE PLAYER DON'T TAKE DAMAGE THEN)
+thread = None
+
+"""
+                FIX HEALTH POWERUP
+                FIX URF POWERUP
+                FIX BIG-CANON-BULLETS POWERUP
+                
+                FIX AT START MENU OPTIONS TO PLAY PVP OR PVE
+"""
 
 
 def calculate_bullet_pos_and_collision(delta_time):
@@ -65,27 +71,61 @@ def calculate_bullet_pos_and_collision(delta_time):
                 if distance < bullet_radius + player_radius:
                     bullets[clientId].pop(i)
                     clients[clientId2]["hp"] -= bullet_damage
-                    print(f"Player: {clientId2} got hit")
                     if clients[clientId2]["hp"] <= 0:
-                        print(f"Player: {clientId2} died")
-                        print(f"Giving 1 point to {clientId}")
                         clients[clientId]["score"] += 1
-                        clients[clientId2]["hp"] = 100
                         clients[clientId2]["x"] = random.randint(50, canvas_width - 50)
                         clients[clientId2]["y"] = random.randint(50, canvas_height - 50)
+                        clients[clientId2]["hp"] = 100
+
+
+def powerup_collision():
+    for clientId in clients:
+        client = clients[clientId]
+        for powerup_name in powerups:
+            powerup = powerups[powerup_name]
+            if not powerup:
+                continue
+            dx = powerup["x"] - client["x"]
+            dy = powerup["y"] - client["y"]
+            distance = math.sqrt(dx ** 2 + dy ** 2)
+
+            if distance < powerup_radius + player_radius:
+                powerups[powerup_name] = {}
+                clients[clientId][powerup_name] = True
+
+
+def spawn_multi_shot_buff():
+    x = random.randint(50, canvas_width - 50)
+    y = random.randint(50, canvas_height - 50)
+
+    powerups["multi_shot"] = {
+        "x": x,
+        "y": y,
+        "size": powerup_radius,
+        "color1": "red",
+        "color2": "blue"
+    }
 
 
 def server_update():
     """Continuously updates for every client in a single loop."""
-    global last_time
+    last_time = time.time()
+    last_spawn_time = time.time()
     while True:
         current_time = time.time()
         delta_time = current_time - last_time
         last_time = current_time
 
+        if not powerups:
+            if current_time - last_spawn_time >= 10:
+                spawn_multi_shot_buff()
+                last_spawn_time = current_time
+
         calculate_bullet_pos_and_collision(delta_time)
+        powerup_collision()
         socketio.emit("updateClients", clients)
         socketio.emit("updateBullets", bullets)
+        socketio.emit("updatePowerups", powerups)
         socketio.sleep(0.004)  # ~240 updates per second
 
 
@@ -122,7 +162,8 @@ def handle_connect():
         "color": color,
         "hp": 100,
         "score": 0,
-        "alive": False
+        "alive": False,
+        "multishot": False
     }
     bullets[request.sid] = []  # give client their own bullets list
 
@@ -144,13 +185,18 @@ def handle_client_attributes(name_data):
 
 @socketio.on("updatePosition")
 def handle_update_position(data):
-    clients[request.sid] = data  # Update the client's position
+    clients[request.sid]["x"] = data["x"]  # Update the client's position
+    clients[request.sid]["y"] = data["y"]
 
 
 @socketio.on("updateBulletPosition")
 def handle_update_bullet_position(data):
     if data:
-        bullets[request.sid].append(data)  # Update the bullets position
+        if type(data) is list:
+            print("adding bullet list")
+            [bullets[request.sid].append(bullet) for bullet in data]
+        else:
+            bullets[request.sid].append(data)  # Update the bullets position
 
 
 @socketio.on("disconnect")
