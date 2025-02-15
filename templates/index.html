@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jägermeist's Browser Game</title>
+    <link rel="stylesheet" href="../static/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.min.js"></script>
+  </head>
+  <body>
+    <div id="start-menu">
+      <button id="play-button">Play</button>
+      <label for="usernameInput">Your Name:</label>
+      <input type="text" id="usernameInput" placeholder="Enter your name">
+    </div>
+    <canvas id="canvas" width="{{ canvas_width }}" height="{{ canvas_height }}"></canvas>
+    <script>
+      // client/player/circle properties
+      const playerRadius = {{ player_radius }};
+      const playerSpeed = {{ player_speed }};
+
+      // bullet properties
+      const bulletRadius = {{ bullet_radius }};
+      const bulletColor = "{{ bullet_color }}";
+      const bulletCooldown = {{ bullet_cooldown }};
+      const bulletSpeed = {{ bullet_speed }};
+    </script>
+    <script src="../static/script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+body {
+    background-color: grey;
+}
+
+#start-menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+#play-button {
+    font-size: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: white;
+    background: #1e90ff;
+    border: none;
+    border-radius: 5px;
+}
+
+#play-button:hover {
+    background: #4682b4;
+}
+
+canvas {
+    border: 1px solid white;
+    background-color: black;
+    display: block;
+    margin: 0 auto;
+}
