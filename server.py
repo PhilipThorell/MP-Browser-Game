@@ -31,9 +31,12 @@ bullet_cooldown = 400  # milliseconds
 
 powerup_radius = 17
 
+UPDATES_PER_SECOND = 480
+
 thread = None
 
 """
+                FIX SO THAT MULTISHOT WEARS OFF AFTER SOME TIME
                 FIX HEALTH POWERUP
                 FIX URF POWERUP
                 FIX BIG-CANON-BULLETS POWERUP
@@ -126,7 +129,7 @@ def server_update():
         socketio.emit("updateClients", clients)
         socketio.emit("updateBullets", bullets)
         socketio.emit("updatePowerups", powerups)
-        socketio.sleep(0.004)  # ~240 updates per second
+        socketio.sleep(1/UPDATES_PER_SECOND)
 
 
 @app.route("/")
