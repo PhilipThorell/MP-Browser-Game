@@ -81,48 +81,118 @@ def calculate_bullet_pos_and_collision(delta_time):
                         clients[clientId2]["hp"] = 100
 
 
+def init_powerups():
+    global powerups
+    powerups = {"multi_shot": {"x": None,
+                               "y": None,
+                               "size": powerup_radius,
+                               "color1": "green",
+                               "color2": "blue",
+                               "spawned": False},
+                "urf_shot": {"x": None,
+                             "y": None,
+                             "size": powerup_radius,
+                             "color1": "orange",
+                             "color2": "purple",
+                             "spawned": False},
+                "med_kit": {"x": None,
+                            "y": None,
+                            "size": powerup_radius,
+                            "color1": "red",
+                            "color2": "white",
+                            "spawned": False}}
+
+
 def powerup_collision():
     for clientId in clients:
         client = clients[clientId]
         for powerup_name in powerups:
             powerup = powerups[powerup_name]
-            if not powerup:
+            if not powerup["x"] or not powerup["y"]:
                 continue
+
             dx = powerup["x"] - client["x"]
             dy = powerup["y"] - client["y"]
             distance = math.sqrt(dx ** 2 + dy ** 2)
 
             if distance < powerup_radius + player_radius:
-                powerups[powerup_name] = {}
-                clients[clientId][powerup_name] = True
+                if powerup_name == "med_kit":
+                    powerups[powerup_name]["x"] = None
+                    powerups[powerup_name]["y"] = None
+                    powerups[powerup_name]["spawned"] = False
+                    clients[clientId]["hp"] += 100
+                else:
+                    powerups[powerup_name]["x"] = None
+                    powerups[powerup_name]["y"] = None
+                    powerups[powerup_name]["spawned"] = False
+                    clients[clientId][powerup_name] = True
+                    clients[clientId][powerup_name+"_timer"] = time.time()
 
 
 def spawn_multi_shot_buff():
     x = random.randint(50, canvas_width - 50)
     y = random.randint(50, canvas_height - 50)
 
-    powerups["multi_shot"] = {
-        "x": x,
-        "y": y,
-        "size": powerup_radius,
-        "color1": "red",
-        "color2": "blue"
-    }
+    powerups["multi_shot"]["x"] = x
+    powerups["multi_shot"]["y"] = y
+    powerups["multi_shot"]["spawned"] = True
+
+
+def spawn_urf_shot_buff():
+    x = random.randint(50, canvas_width - 50)
+    y = random.randint(50, canvas_height - 50)
+
+    powerups["urf_shot"]["x"] = x
+    powerups["urf_shot"]["y"] = y
+    powerups["urf_shot"]["spawned"] = True
+
+
+def spawn_mk_shot_buff():
+    x = random.randint(50, canvas_width - 50)
+    y = random.randint(50, canvas_height - 50)
+
+    powerups["med_kit"]["x"] = x
+    powerups["med_kit"]["y"] = y
+    powerups["med_kit"]["spawned"] = True
 
 
 def server_update():
     """Continuously updates for every client in a single loop."""
     last_time = time.time()
-    last_spawn_time = time.time()
+    last_ms_spawn_time = time.time()
+    last_urf_spawn_time = time.time()
+    last_mk_spawn_time = time.time()
+
+    init_powerups()
     while True:
         current_time = time.time()
         delta_time = current_time - last_time
         last_time = current_time
 
-        if not powerups:
-            if current_time - last_spawn_time >= 10:
+        if not powerups["multi_shot"]["spawned"]:
+            ms_current_time = time.time()
+            if ms_current_time - last_ms_spawn_time >= 10:
                 spawn_multi_shot_buff()
-                last_spawn_time = current_time
+                last_ms_spawn_time = ms_current_time
+        if not powerups["urf_shot"]["spawned"]:
+            urf_current_time = time.time()
+            if urf_current_time - last_urf_spawn_time >= 15:
+                spawn_urf_shot_buff()
+                last_urf_spawn_time = urf_current_time
+        if not powerups["med_kit"]["spawned"]:
+            mk_current_time = time.time()
+            if mk_current_time - last_mk_spawn_time >= 20:
+                spawn_mk_shot_buff()
+                last_mk_spawn_time = mk_current_time
+
+        for clientId in clients:
+            client = clients[clientId]
+            for powerupId in powerups:
+                if powerupId == "med_kit":
+                    continue
+                if client[powerupId]:
+                    if current_time - client[powerupId+"_timer"] >= 5:
+                        client[powerupId] = False
 
         calculate_bullet_pos_and_collision(delta_time)
         powerup_collision()
@@ -166,7 +236,8 @@ def handle_connect():
         "hp": 100,
         "score": 0,
         "alive": False,
-        "multishot": False
+        "multi_shot": False,
+        "urf_shot": False
     }
     bullets[request.sid] = []  # give client their own bullets list
 
@@ -196,7 +267,6 @@ def handle_update_position(data):
 def handle_update_bullet_position(data):
     if data:
         if type(data) is list:
-            print("adding bullet list")
             [bullets[request.sid].append(bullet) for bullet in data]
         else:
             bullets[request.sid].append(data)  # Update the bullets position

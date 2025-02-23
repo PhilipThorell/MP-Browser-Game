@@ -91,6 +91,9 @@ function drawClients() {
 }
 function drawPowerups() {
     for (let powerup in powerups) {
+        if (!powerups[powerup].x || !powerups[powerup].y) {
+            continue;
+        }
         let x = powerups[powerup].x;
         let y = powerups[powerup].y;
         let radius = powerups[powerup].size;
@@ -171,13 +174,17 @@ function gameLoop() {
 
     let currentTime = Date.now();
 
-    console.log(player.multishot);
-    console.log(player.x);
+    if (player.urf_shot) {
+        shootCooldown = bulletCooldown / 3;
+    } else {
+        shootCooldown = bulletCooldown;
+    }
 
-    if (keys[" "] && currentTime - lastShootTime >= bulletCooldown) {
-        if (player.multishot) {
+    if (keys[" "] && currentTime - lastShootTime >= shootCooldown) {
+        if (player.multi_shot) {
             newBullet = multi_shoot();
-        } else {
+        }
+        if (!player.multi_shot) {
             newBullet = shoot();
         }
         emitBulletPosition(newBullet); // Send the updated bullets position to the server
